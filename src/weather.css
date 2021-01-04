@@ -703,7 +703,8 @@ ol, ul {
 	height: 16px;
 	margin: 50px 60px 0;
 	position: relative;
-	z-index: 2
+	z-index: 2;
+	user-select: none;
 }
 
 #sec-main .ct-aqi {
@@ -877,7 +878,8 @@ ol, ul {
 	overflow-y: hidden;
 	-webkit-overflow-scrolling: touch;
 	margin-bottom: 10px;
-	padding-top: 30px
+	padding-top: 30px;
+	user-select: none;
 }
 
 #sec-hours::-webkit-resizer,#sec-hours::-webkit-scrollbar {

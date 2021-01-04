@@ -54,8 +54,9 @@ function Weather({ province, city }) {
     const [windOrHumidity, setWindOrHumidity] = useState(true)
     const [hoursScrollLeft, setHoursScrollLeft] = useState(0)
     const [LivingLeft, setLivingLeft] = useState(true)
+    const [tip, setTip] = useState(0)
     useEffect(() => {
-        jsonp(`https://wis.qq.com/weather/common?source=pc&weather_type=forecast_1h|forecast_24h|alarm|limit|tips|rise|observe&province=${province}&city=${city}&county=`, {}, (err, data) => {
+        jsonp(`https://wis.qq.com/weather/common?source=pc&weather_type=forecast_1h|forecast_24h|alarm|limit|tips|rise|observe|index&province=${province}&city=${city}&county=`, {}, (err, data) => {
             if (err) {
                 console.log(err)
             } else {
@@ -63,7 +64,9 @@ function Weather({ province, city }) {
             }
         })
         let tick = setInterval(() => {
-            setWindOrHumidity(!windOrHumidity)
+            setWindOrHumidity((v) => {
+                return !v
+            })
         }, 5000);
         return () => {
             clearInterval(tick)
@@ -190,17 +193,27 @@ function Weather({ province, city }) {
         }
     }
     const LivingWheel = (e) => {
-        if (e.deltaY > 0 ) {
+        if (e.deltaY > 0) {
             setLivingLeft(false);
         } else {
             setLivingLeft(true);
         }
     }
+    const changeTip = () => {
+        let c = 0
+        for (let i in observe["tips"]["observe"]) {
+            c++
+        }
+        let t = (tip + 1) % c
+        setTip(t)
+    }
+
     if (observe) {
         let current = observe['observe']
         let tomorrowForecast = observe['forecast_24h'][2]
         let todayForecast = observe['forecast_24h'][1]
         let mainClass = m[current['weather_code']] + " " + dayOrNight(moment())
+        let carLimit = observe["limit"]["tail_number"] !== ""
         return (
             <div className="weather-root">
                 <section id="sec-main" className={mainClass}>
@@ -215,7 +228,7 @@ function Weather({ province, city }) {
                         <p className={windOrHumidity ? "show txt" : "txt"}>{todayForecast['day_wind_direction']} {todayForecast['day_wind_power']}级</p>
                         <p className={!windOrHumidity ? "show txt" : "txt"}>湿度 {current['humidity']}%</p>
                     </div>
-                    <p id="txt-tips">{observe['tips']['observe'][0]}</p>
+                    <p id="txt-tips" onClick={changeTip}>{observe['tips']['observe'][tip]}</p>
                     <div id="ct-landscape">
                         <div className="layer" id="layer1"></div>
                         <div className="layer" id="layer2"></div>
@@ -369,24 +382,42 @@ function Weather({ province, city }) {
                         <div className="react-swipe-container " style={{ overflow: "hidden", visibility: "visible", position: "relative" }}>
                             <div style={{ overflow: "hidden", position: "relative", width: "750px" }}>
                                 <ul className="ls-living" data-index="0" style={{ cssFloat: "left", width: "375px", position: "relative", transitionProperty: "transform", left: "0px", transitionDuration: "300ms", transform: "translate(" + (LivingLeft ? "0" : "-375") + "px, 0px) translateZ(0px)" }}>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_xianhao"></span><p className="content">3和8</p><p className="title">尾号限行</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_chuanyi_cool"></span><p className="content">寒冷</p><p className="title">穿衣</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_yusan"></span><p className="content">不带伞</p><p className="title">雨伞</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_ganmao"></span><p className="content">易发</p><p className="title">感冒</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_xiche"></span><p className="content">适宜</p><p className="title">洗车</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_yundong"></span><p className="content">较不宜</p><p className="title">运动</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_fangsai"></span><p className="content">中等</p><p className="title">防晒</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_diaoyu"></span><p className="content">较适宜</p><p className="title">钓鱼</p></li>
+                                    {
+                                        carLimit ?
+                                            (<li className="item" data-boss="shzs"><span className="icon icon_xianhao"></span><p className="content">{observe["limit"]["tail_number"]}</p><p className="title">{observe["limit"]["time"]}</p></li>) :
+                                            ""
+                                    }
+                                    <li className="item" data-boss="shzs"><span className="icon icon_chuanyi_cool"></span><p className="content">{observe["index"]["clothes"]["info"]}</p><p className="title">{observe["index"]["clothes"]["name"]}</p></li>
+                                    <li className="item" data-boss="shzs"><span className="icon icon_yusan"></span><p className="content">{observe["index"]["umbrella"]["info"]}</p><p className="title">{observe["index"]["umbrella"]["name"]}</p></li>
+                                    <li className="item" data-boss="shzs"><span className="icon icon_ganmao"></span><p className="content">{observe["index"]["cold"]["info"]}</p><p className="title">{observe["index"]["cold"]["name"]}</p></li>
+                                    <li className="item" data-boss="shzs"><span className="icon icon_xiche"></span><p className="content">{observe["index"]["carwash"]["info"]}</p><p className="title">{observe["index"]["carwash"]["name"]}</p></li>
+                                    <li className="item" data-boss="shzs"><span className="icon icon_yundong"></span><p className="content">{observe["index"]["sports"]["info"]}</p><p className="title">{observe["index"]["sports"]["name"]}</p></li>
+                                    <li className="item" data-boss="shzs"><span className="icon icon_fangsai"></span><p className="content">{observe["index"]["sunscreen"]["info"]}</p><p className="title">{observe["index"]["sunscreen"]["name"]}</p></li>
+                                    <li className="item" data-boss="shzs"><span className="icon icon_diaoyu"></span><p className="content">{observe["index"]["fish"]["info"]}</p><p className="title">{observe["index"]["fish"]["name"]}</p></li>
+                                    {
+                                        !carLimit ?
+                                            (<li className="item" data-boss="shzs"><span className="icon icon_lvyou"></span><p className="content">{observe["index"]["tourism"]["info"]}</p><p className="title">{observe["index"]["tourism"]["name"]}</p></li>)
+                                            : ""
+                                    }
                                 </ul>
                                 <ul className="ls-living" data-index="1" style={{ cssFloat: "left", width: "375px", position: "relative", transitionProperty: "transform", left: "-375px", transitionDuration: "300ms", transform: "translate(" + (LivingLeft ? "375" : "0") + "px, 0px) translateZ(0px)" }}>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_lvyou"></span><p className="content">较适宜</p><p className="title">旅游</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_jiaotong"></span><p className="content">良好</p><p className="title">交通</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_wurankuosan"></span><p className="content">中</p><p className="title_wurankuosan">空气污染扩散条件</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_shushidu"></span><p className="content">较不舒适</p><p className="title">舒适度</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_liangshai"></span><p className="content">基本适宜</p><p className="title">晾晒</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_huazhuang"></span><p className="content">保湿</p><p className="title">化妆</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_chenlian"></span><p className="content">适宜</p><p className="title">晨练</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_guomin"></span><p className="content">极不易发</p><p className="title">过敏</p></li>
+                                    {
+                                        carLimit ?
+                                            (<li className="item" data-boss="shzs"><span className="icon icon_lvyou"></span><p className="content">{observe["index"]["tourism"]["info"]}</p><p className="title">{observe["index"]["tourism"]["name"]}</p></li>)
+                                            : ""
+                                    }
+                                    <li className="item" data-boss="shzs"><span className="icon icon_jiaotong"></span><p className="content">{observe["index"]["traffic"]["info"]}</p><p className="title">{observe["index"]["traffic"]["name"]}</p></li>
+                                    <li className="item" data-boss="shzs"><span className="icon icon_wurankuosan"></span><p className="content">{observe["index"]["diffusion"]["info"]}</p><p className="title_wurankuosan">{observe["index"]["diffusion"]["name"]}</p></li>
+                                    <li className="item" data-boss="shzs"><span className="icon icon_shushidu"></span><p className="content">{observe["index"]["comfort"]["info"]}</p><p className="title">{observe["index"]["comfort"]["name"]}</p></li>
+                                    <li className="item" data-boss="shzs"><span className="icon icon_liangshai"></span><p className="content">{observe["index"]["drying"]["info"]}</p><p className="title">{observe["index"]["drying"]["name"]}</p></li>
+                                    <li className="item" data-boss="shzs"><span className="icon icon_huazhuang"></span><p className="content">{observe["index"]["makeup"]["info"]}</p><p className="title">{observe["index"]["makeup"]["name"]}</p></li>
+                                    <li className="item" data-boss="shzs"><span className="icon icon_chenlian"></span><p className="content">{observe["index"]["morning"]["info"]}</p><p className="title">{observe["index"]["morning"]["name"]}</p></li>
+                                    <li className="item" data-boss="shzs"><span className="icon icon_guomin"></span><p className="content">{observe["index"]["chill"]["info"]}</p><p className="title">{observe["index"]["chill"]["name"]}</p></li>
+                                    {
+                                        !carLimit ?
+                                            (<li className="item" data-boss="shzs"><span className="icon icon icon_zhongshu"></span><p className="content">{observe["index"]["heatstroke"]["info"]}</p><p className="title">{observe["index"]["heatstroke"]["name"]}</p></li>)
+                                            : ""
+                                    }
                                 </ul>
                             </div>
                         </div>
