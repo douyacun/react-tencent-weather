@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import jsonp from 'jsonp';
 import moment from 'moment';
+import echarts from 'echarts/lib/echarts';
+import ReactEchartsCore from 'echarts-for-react/lib/core';
+import 'echarts/lib/chart/bar';
+import 'echarts/lib/chart/line';
 import "./weather.css";
 
 const m = {
@@ -49,6 +53,43 @@ const m = {
     302: "C4"
 };
 
+//黄历、穿衣、雨伞、感冒、洗车、运动、防晒、钓鱼、旅游、交通、空气污染扩散条件、舒适度、晾晒指数
+var livingKeys = [
+    // { key: "huangli", icon: "icon_huangli" },
+    { key: "clothes", icon: "icon_chuanyi" },
+    { key: "umbrella", icon: "icon_yusan" },
+    { key: "cold", icon: "icon_ganmao" },
+    { key: "carwash", icon: "icon_xiche" },
+    { key: "sports", icon: "icon_yundong" },
+    { key: "sunscreen", icon: "icon_fangsai" },
+    { key: "fish", icon: "icon_diaoyu" },
+    { key: "tourism", icon: "icon_lvyou" },
+    { key: "traffic", icon: "icon_jiaotong" },
+    { key: "diffusion", icon: "icon_wurankuosan" },
+    { key: "comfort", icon: "icon_shushidu" },
+    { key: "drying", icon: "icon_liangshai" },
+    { key: "makeup", icon: "icon_huazhuang" },
+    { key: "morning", icon: "icon_chenlian" },
+    { key: "chill", icon: "icon_guomin" },
+    { key: "heatstroke", icon: "icon_zhongshu" },
+];
+
+//配置穿衣指数的信息
+//key:序号，level：穿衣级别，icon：对应服饰的icon
+//1，炎热;2，热，短袖
+//3，舒适;4，较舒适，长袖，衬衫，薄外套
+//5，较冷，厚外套，毛衣
+//6，冷;7，寒冷，棉服，羽绒服
+var clothesKeys = [
+    { key: 1, level: "炎热", icon: "icon_chuanyi_hot" },
+    { key: 2, level: "热", icon: "icon_chuanyi_hot" },
+    { key: 3, level: "舒适", icon: "icon_chuanyi_shushi" },
+    { key: 4, level: "较舒适", icon: "icon_chuanyi_shushi" },
+    { key: 5, level: "较冷", icon: "icon_chuanyi_jiaoleng" },
+    { key: 6, level: "冷", icon: "icon_chuanyi_cool" },
+    { key: 7, level: "寒冷", icon: "icon_chuanyi_cool" }
+]
+
 function Weather({ province, city }) {
     const [observe, setObserve] = useState(undefined)
     const [windOrHumidity, setWindOrHumidity] = useState(true)
@@ -73,7 +114,7 @@ function Weather({ province, city }) {
         }
     }, [])
     /**
-     * 渲染小时预报
+     * 小时预报：初始化
      * @param {Object} observe 
      */
     const hoursForecast = (observe) => {
@@ -136,7 +177,7 @@ function Weather({ province, city }) {
         return list
     }
     /**
-     * 白天或晚上
+     * 小时预报：白天或晚上
      * @param {moment} date
      * @returns string
      */
@@ -180,6 +221,64 @@ function Weather({ province, city }) {
         }
         return undefined
     }
+
+    /**
+     * 生活指数：初始化
+     * @param {object} index 生活指数map
+     */
+    const initLiving = (index) => {
+        let data = [];
+        livingKeys.forEach(function (item) {
+            //根据当前穿衣级别修改对应服饰的icon
+            if (item.key === "clothes") {
+                clothesKeys.forEach(function (item1) {
+                    if (index[item.key].info === item1.level) {
+                        item.icon = item1.icon;
+                    }
+                })
+            }
+            data.push({
+                name: index[item.key].name,
+                info: index[item.key].info,
+                detail: index[item.key].detail,
+                icon: item.icon
+            })
+        });
+        return (
+            <div style={{ overflow: "hidden", position: "relative", width: "750px" }}>
+                <ul className="ls-living" data-index="0" style={{ cssFloat: "left", width: "375px", position: "relative", transitionProperty: "transform", left: "0px", transitionDuration: "300ms", transform: "translate(" + (LivingLeft ? "0" : "-375") + "px, 0px) translateZ(0px)" }}>
+                    {
+                        data.slice(0, 8).map(({ icon, name, info, detail }, key) => (
+                            <li className="item" key={key}><span className={"icon " + icon}></span><p className="content">{info}</p><p className="title">{name}</p></li>
+                        ))
+                    }
+                </ul>
+                <ul className="ls-living" data-index="1" style={{ cssFloat: "left", width: "375px", position: "relative", transitionProperty: "transform", left: "-375px", transitionDuration: "300ms", transform: "translate(" + (LivingLeft ? "375" : "0") + "px, 0px) translateZ(0px)" }}>
+                    {
+                        data.slice(8, 16).map(({ icon, name, info, detail }, key) => (
+                            <li className="item" key={key}><span className={"icon " + icon}></span><p className="content">{info}</p><p className="title">{name}</p></li>
+                        ))
+                    }
+                </ul>
+            </div>
+        )
+    }
+    /**
+     * 生活指数：滑轮滚动
+     * @param {*} e 
+     */
+    const livingWheel = (e) => {
+        e.preventDefault();
+        if (e.deltaY > 0) {
+            setLivingLeft(false);
+        } else {
+            setLivingLeft(true);
+        }
+    }
+
+    /**
+     * 小时：滑轮滚动
+     */
     const hoursWheel = (e) => {
         const step = 15
         if (e.deltaY > 0) {
@@ -192,13 +291,7 @@ function Weather({ province, city }) {
             }
         }
     }
-    const LivingWheel = (e) => {
-        if (e.deltaY > 0) {
-            setLivingLeft(false);
-        } else {
-            setLivingLeft(true);
-        }
-    }
+
     const changeTip = () => {
         let c = 0
         for (let i in observe["tips"]["observe"]) {
@@ -208,12 +301,188 @@ function Weather({ province, city }) {
         setTip(t)
     }
 
+    /**
+     * 7日天气预报：初始化
+     * @param {forecast_24h} data 
+     */
+    const initDays = (data) => {
+        moment.locale('zh-cn', {
+            weekdaysShort: '周日_周一_周二_周三_周四_周五_周六'.split('_')
+        });
+        let today = moment();
+        let formatData = [],
+            chartLabelData = [],
+            chartMaxData = [],
+            chartMinData = [];
+
+        for (var i = 0; i < 8; i++) {
+            var item = data[i];
+            if (item.day_weather_short && item.night_weather_short && item.max_degree && item.min_degree) {
+                if (moment(item.time).add(1, 'days').isSame(today, 'day')) {
+                    item.showText = "昨天";
+                } else if (moment(item.time).isSame(today, 'day')) {
+                    item.showText = "今天";
+                } else if (moment(item.time).subtract(1, 'days').isSame(today, 'day')) {
+                    item.showText = "明天";
+                } else if (moment(item.time).subtract(2, 'days').isSame(today, 'day')) {
+                    item.showText = "后天";
+                } else {
+                    item.showText = moment(item.time).format('ddd');
+                }
+                chartLabelData.push(item.time)
+                chartMaxData.push(item.max_degree - 0);
+                chartMinData.push(item.min_degree - 0);
+                if (item.time) {
+                    item.formatTime = item.time.substring(5).replace("-", "月") + "日";
+                }
+                formatData.push(item)
+            }
+        }
+
+        let option = {
+            backgroundColor: "rgba(0,0,0,0.0)",
+            color: ["#FCC370", "#94CCF9"],
+            animation: false,
+            // renderAsImage: true,
+            tooltip: {
+                show: false
+            },
+            xAxis: [{
+                type: 'category',
+                show: false,
+                data: chartLabelData
+            }],
+            yAxis: [{
+                type: 'value',
+                show: false,
+                boundaryGap: ['45%', '45%'],
+                scale: true
+            }],
+            grid: {
+                x: 0,
+                y: 0,
+                y2: 0,
+                height: 136,
+                width: 500,
+                borderWidth: "0px"
+            },
+            // legend: {
+            //     orient: 'horizontal',
+            //     x: 'center',
+            //     y: 'top',
+            //     itemGap: 55
+            // },
+            series: [{
+                type: 'line',
+                data: chartMaxData,
+                smooth: true,
+                symbol: 'circle',
+                symbolSize: 8,
+                clipOverflow: false,
+                lineStyle: {
+                    normal: {
+                        width: 3
+                    }
+                },
+                label: {
+                    normal: {
+                        show: true,
+                        textStyle: {
+                            fontSize: '14',
+                            fontFamily: '微软雅黑',
+                            color: "#384C78"
+                        },
+                        distance: 10,
+                        formatter: function (val) {
+                            if (val.dataIndex == 0) {
+                                return "{first|" + val.data + "°}"
+                            }
+                            return val.data + "°"
+                        },
+                        rich: {
+                            first: {
+                                fontSize: '14',
+                                fontFamily: '微软雅黑',
+                                color: "#C2C2C2"
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                type: 'line',
+                data: chartMinData,
+                smooth: true,
+                symbol: 'circle',
+                symbolSize: 8,
+                lineStyle: {
+                    normal: {
+                        width: 3
+                    }
+                },
+                label: {
+                    normal: {
+                        show: true,
+                        position: "bottom",
+                        textStyle: {
+                            fontSize: '14',
+                            fontFamily: '微软雅黑',
+                            color: "#555555"
+                        },
+                        distance: 10,
+                        formatter: function (val) {
+                            if (val.dataIndex == 0) {
+                                return "{first|" + val.data + "°}"
+                            }
+                            return val.data + "°"
+                        },
+                        rich: {
+                            first: {
+                                fontSize: '14',
+                                fontFamily: '微软雅黑',
+                                color: "#C2C2C2"
+                            }
+                        }
+                    }
+                }
+            }
+            ]
+        };
+        return (
+            <section id="sec-days" className="container">
+                <div id="ct-scroll" style={{ width: 500 }}>
+                    <ol id="ls-days">
+                        {
+                            formatData.map((item, key) => (
+                                <li className="item" key={key}><p className="day">{item.showText}</p><p className="date">{moment(item.time).format("MM/DD")}</p>
+                                    <div className="ct-daytime">
+                                        <p className="weather">{item.night_weather}</p>
+                                        <img src={"//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/day/" + item.day_weather_code + ".svg"} className="icon" />
+                                    </div>
+                                    <div className="ct-night">
+                                        <img src={"//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/night/" + item.night_weather_code + ".svg"} className="icon" />
+                                        <p className="weather">{item.night_weather_short}</p>
+                                    </div><p className="wind">{item.night_wind_direction}</p><p className="wind">{item.night_wind_power}级</p>
+                                </li>
+                            ))
+                        }
+                    </ol>
+                    <div id="ct-chart-days" style={{ width: 500 }}>
+                        <ReactEchartsCore
+                            echarts={echarts}
+                            option={option}
+                        />
+                    </div>
+                </div>
+            </section>
+        )
+    }
+
     if (observe) {
         let current = observe['observe']
         let tomorrowForecast = observe['forecast_24h'][2]
         let todayForecast = observe['forecast_24h'][1]
         let mainClass = m[current['weather_code']] + " " + dayOrNight(moment())
-        let carLimit = observe["limit"]["tail_number"] !== ""
         return (
             <div className="weather-root">
                 <section id="sec-main" className={mainClass}>
@@ -287,138 +556,12 @@ function Weather({ province, city }) {
                         </ol>
                     </div>
                 </section>
-                {/* <section id="sec-days" className="container">
-                    <div id="ct-scroll" style={{ width: 500 }}>
-                        <ol id="ls-days">
-                            <li className="item" ><p className="day">昨天</p><p className="date">01/03</p>
-                                <div className="ct-daytime">
-                                    <p className="weather">阴</p>
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/day/02.svg" className="icon" />
-                                </div>
-                                <div className="ct-night">
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/night/02.svg" className="icon" />
-                                    <p className="weather">阴</p>
-                                </div><p className="wind">东风</p><p className="wind">4级</p></li>
-                            <li className="item" ><p className="day">今天</p><p className="date">01/04</p>
-                                <div className="ct-daytime">
-                                    <p className="weather">阴</p>
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/day/02.svg" className="icon" />
-                                </div>
-                                <div className="ct-night">
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/night/02.svg" className="icon" />
-                                    <p className="weather">阴</p>
-                                </div><p className="wind">东北风</p><p className="wind">4级</p></li>
-                            <li className="item" ><p className="day">明天</p><p className="date">01/05</p>
-                                <div className="ct-daytime">
-                                    <p className="weather">阴</p>
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/day/02.svg" className="icon" />
-                                </div>
-                                <div className="ct-night">
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/night/01.svg" className="icon" />
-                                    <p className="weather">多云</p>
-                                </div><p className="wind">北风</p><p className="wind">4级</p></li>
-                            <li className="item" ><p className="day">后天</p><p className="date">01/06</p>
-                                <div className="ct-daytime">
-                                    <p className="weather">阴</p>
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/day/02.svg" className="icon" />
-                                </div>
-                                <div className="ct-night">
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/night/02.svg" className="icon" />
-                                    <p className="weather">阴</p>
-                                </div><p className="wind">北风</p><p className="wind">5级</p></li>
-                            <li className="item" ><p className="day">周四</p><p className="date">01/07</p>
-                                <div className="ct-daytime">
-                                    <p className="weather">阴</p>
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/day/02.svg" className="icon" />
-                                </div>
-                                <div className="ct-night">
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/night/01.svg" className="icon" />
-                                    <p className="weather">多云</p>
-                                </div><p className="wind">西北风</p><p className="wind">4级</p></li>
-                            <li className="item" ><p className="day">周五</p><p className="date">01/08</p>
-                                <div className="ct-daytime">
-                                    <p className="weather">晴</p>
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/day/00.svg" className="icon" />
-                                </div>
-                                <div className="ct-night">
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/night/01.svg" className="icon" />
-                                    <p className="weather">多云</p>
-                                </div><p className="wind">西北风</p><p className="wind">3级</p></li>
-                            <li className="item" ><p className="day">周六</p><p className="date">01/09</p>
-                                <div className="ct-daytime">
-                                    <p className="weather">多云</p>
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/day/01.svg" className="icon" />
-                                </div>
-                                <div className="ct-night">
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/night/02.svg" className="icon" />
-                                    <p className="weather">阴</p>
-                                </div><p className="wind">西南风</p><p className="wind">3级</p></li>
-                            <li className="item" ><p className="day">周日</p><p className="date">01/10</p>
-                                <div className="ct-daytime">
-                                    <p className="weather">多云</p>
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/day/01.svg" className="icon" />
-                                </div>
-                                <div className="ct-night">
-                                    <img src="//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/night/00.svg" className="icon" />
-                                    <p className="weather">晴</p>
-                                </div><p className="wind">西风</p><p className="wind">3级</p></li>
-                        </ol>
-                        <div id="ct-chart-days" style={{ width: 500 }}>
-                            <div className="chartjs-size-monitor" style={{position: "absolute",inset: "0px",overflow: "hidden",pointerEvents: "none",visibility: "hidden",zIndex: -1}}>
-                                <div className="chartjs-size-monitor-expand" style={{ position: "absolute", left: "0", top: "0", right: "0", bottom: "0", overflow: "hidden", pointerEvents: "none", visibility: "hidden", zIndex: -1 }}>
-                                    <div style={{ position: "absolute", width: "1000000px", height: "1000000px", left: "0", top: "0" }}></div>
-                                </div>
-                                <div className="chartjs-size-monitor-shrink" style={{ position: "absolute", left: "0", top: "0", right: "0", bottom: "0", overflow: "hidden", pointerEvents: "none", visibility: "hidden", zIndex: -1 }}>
-                                    <div style={{ position: "absolute", width: "200%", height: "200%", left: "0", top: "0" }}></div>
-                                </div>
-                            </div>
-                            <canvas height="272" width="1000" className="chartjs-render-monitor" style={{ display: "block", height: "136px", width: "500px" }}></canvas>
-                        </div>
-                    </div>
-                </section>
-                 */}
+                {initDays(observe["forecast_24h"])}
                 <section id="sec-living" className="container">
-                    <div id="living-scroll" onWheel={LivingWheel}>
+                    <div id="living-scroll" onWheel={livingWheel}>
                         <div className="react-swipe-container " style={{ overflow: "hidden", visibility: "visible", position: "relative" }}>
                             <div style={{ overflow: "hidden", position: "relative", width: "750px" }}>
-                                <ul className="ls-living" data-index="0" style={{ cssFloat: "left", width: "375px", position: "relative", transitionProperty: "transform", left: "0px", transitionDuration: "300ms", transform: "translate(" + (LivingLeft ? "0" : "-375") + "px, 0px) translateZ(0px)" }}>
-                                    {
-                                        carLimit ?
-                                            (<li className="item" data-boss="shzs"><span className="icon icon_xianhao"></span><p className="content">{observe["limit"]["tail_number"]}</p><p className="title">{observe["limit"]["time"]}</p></li>) :
-                                            ""
-                                    }
-                                    <li className="item" data-boss="shzs"><span className="icon icon_chuanyi_cool"></span><p className="content">{observe["index"]["clothes"]["info"]}</p><p className="title">{observe["index"]["clothes"]["name"]}</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_yusan"></span><p className="content">{observe["index"]["umbrella"]["info"]}</p><p className="title">{observe["index"]["umbrella"]["name"]}</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_ganmao"></span><p className="content">{observe["index"]["cold"]["info"]}</p><p className="title">{observe["index"]["cold"]["name"]}</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_xiche"></span><p className="content">{observe["index"]["carwash"]["info"]}</p><p className="title">{observe["index"]["carwash"]["name"]}</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_yundong"></span><p className="content">{observe["index"]["sports"]["info"]}</p><p className="title">{observe["index"]["sports"]["name"]}</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_fangsai"></span><p className="content">{observe["index"]["sunscreen"]["info"]}</p><p className="title">{observe["index"]["sunscreen"]["name"]}</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_diaoyu"></span><p className="content">{observe["index"]["fish"]["info"]}</p><p className="title">{observe["index"]["fish"]["name"]}</p></li>
-                                    {
-                                        !carLimit ?
-                                            (<li className="item" data-boss="shzs"><span className="icon icon_lvyou"></span><p className="content">{observe["index"]["tourism"]["info"]}</p><p className="title">{observe["index"]["tourism"]["name"]}</p></li>)
-                                            : ""
-                                    }
-                                </ul>
-                                <ul className="ls-living" data-index="1" style={{ cssFloat: "left", width: "375px", position: "relative", transitionProperty: "transform", left: "-375px", transitionDuration: "300ms", transform: "translate(" + (LivingLeft ? "375" : "0") + "px, 0px) translateZ(0px)" }}>
-                                    {
-                                        carLimit ?
-                                            (<li className="item" data-boss="shzs"><span className="icon icon_lvyou"></span><p className="content">{observe["index"]["tourism"]["info"]}</p><p className="title">{observe["index"]["tourism"]["name"]}</p></li>)
-                                            : ""
-                                    }
-                                    <li className="item" data-boss="shzs"><span className="icon icon_jiaotong"></span><p className="content">{observe["index"]["traffic"]["info"]}</p><p className="title">{observe["index"]["traffic"]["name"]}</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_wurankuosan"></span><p className="content">{observe["index"]["diffusion"]["info"]}</p><p className="title_wurankuosan">{observe["index"]["diffusion"]["name"]}</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_shushidu"></span><p className="content">{observe["index"]["comfort"]["info"]}</p><p className="title">{observe["index"]["comfort"]["name"]}</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_liangshai"></span><p className="content">{observe["index"]["drying"]["info"]}</p><p className="title">{observe["index"]["drying"]["name"]}</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_huazhuang"></span><p className="content">{observe["index"]["makeup"]["info"]}</p><p className="title">{observe["index"]["makeup"]["name"]}</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_chenlian"></span><p className="content">{observe["index"]["morning"]["info"]}</p><p className="title">{observe["index"]["morning"]["name"]}</p></li>
-                                    <li className="item" data-boss="shzs"><span className="icon icon_guomin"></span><p className="content">{observe["index"]["chill"]["info"]}</p><p className="title">{observe["index"]["chill"]["name"]}</p></li>
-                                    {
-                                        !carLimit ?
-                                            (<li className="item" data-boss="shzs"><span className="icon icon icon_zhongshu"></span><p className="content">{observe["index"]["heatstroke"]["info"]}</p><p className="title">{observe["index"]["heatstroke"]["name"]}</p></li>)
-                                            : ""
-                                    }
-                                </ul>
+                                {initLiving(observe["index"])}
                             </div>
                         </div>
                     </div>
