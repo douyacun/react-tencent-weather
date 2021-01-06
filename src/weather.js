@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import jsonp from 'jsonp';
 import moment from 'moment';
 import echarts from 'echarts/lib/echarts';
@@ -90,12 +90,20 @@ var clothesKeys = [
     { key: 7, level: "寒冷", icon: "icon_chuanyi_cool" }
 ]
 
+moment.locale('zh-cn', {
+    weekdaysShort: '周日_周一_周二_周三_周四_周五_周六'.split('_')
+});
+
+let curX = 0, dargLock = true;
+
 function Weather({ province, city }) {
     const [observe, setObserve] = useState(undefined)
     const [windOrHumidity, setWindOrHumidity] = useState(true)
-    const [hoursScrollLeft, setHoursScrollLeft] = useState(0)
-    const [LivingLeft, setLivingLeft] = useState(true)
-    const [tip, setTip] = useState(0)
+    const [LivingLeft, setLivingLeft] = useState(true) // 生活指数：左右拖动
+    const [hoursLeft, setHousrLeft] = useState(0) // 生活指数：左右拖动
+    const [tip, setTip] = useState(0) // tip：切换
+    const hoursRef = useRef(null);
+    // const [hoursCurX, setHoursCurX] = useState(0) // 鼠标位置
     useEffect(() => {
         jsonp(`https://wis.qq.com/weather/common?source=pc&weather_type=forecast_1h|forecast_24h|alarm|limit|tips|rise|observe|index&province=${province}&city=${city}&county=`, {}, (err, data) => {
             if (err) {
@@ -104,20 +112,24 @@ function Weather({ province, city }) {
                 setObserve(data.data)
             }
         })
-        let tick = setInterval(() => {
-            setWindOrHumidity((v) => {
-                return !v
-            })
-        }, 5000);
+        // tip 轮换
+        // let tick = setInterval(() => {
+        //     setWindOrHumidity((v) => {
+        //         return !v
+        //     })
+        // }, 5000);
+        // 拖动
+        document.addEventListener("mouseup", dragUp)
         return () => {
-            clearInterval(tick)
+            // clearInterval(tick)
+            document.removeEventListener("mouseup", dragUp)
         }
     }, [])
     /**
      * 小时预报：初始化
      * @param {Object} observe 
      */
-    const hoursForecast = (observe) => {
+    const initHours = (observe) => {
         let keys = Object.keys(observe['forecast_1h']).sort((m, n) => {
             m = parseInt(m)
             n = parseInt(n)
@@ -174,7 +186,46 @@ function Weather({ province, city }) {
         while (list.length > 25) {
             list.pop()
         }
-        return list
+        return (
+            <section id="sec-hours" className="container" ref={hoursRef} onMouseMove={hoursDrag}>
+                <div id="ct-scroll" onMouseDown={hoursDragDown} style={{ width: "400%", transitionDuration: "500ms", transform: "translate(" + hoursLeft + "px, 0px)" }}>
+                    <ol id="ls-hours-weather">
+                        {list}
+                    </ol>
+                </div>
+            </section>
+        )
+    }
+    const hoursDrag = (e) => {
+        let move;
+        if (!dargLock) {
+
+            dargLock = true
+            move = e.clientX - curX
+            if (hoursLeft <= 0) {
+                let x = move <= 0 ? hoursLeft - hoursRef.current.clientWidth : hoursLeft + hoursRef.current.clientWidth 
+                x = x >=0 ? 0: x;
+                x = Math.abs(x) <= hoursRef.current.clientWidth*3 ? x : - hoursRef.current.clientWidth*3;
+                console.log(x, e.clientX, curX);
+                setHousrLeft(x);
+            }
+        }
+    }
+    const hoursDragDown = (e) => {
+        dargLock = false
+        curX = e.clientX
+    }
+    const dragUp = (e) => {
+        dargLock = true
+    }
+
+    const changeTip = () => {
+        let c = 0
+        for (let i in observe["tips"]["observe"]) {
+            c++
+        }
+        let t = (tip + 1) % c
+        setTip(t)
     }
     /**
      * 小时预报：白天或晚上
@@ -221,7 +272,6 @@ function Weather({ province, city }) {
         }
         return undefined
     }
-
     /**
      * 生活指数：初始化
      * @param {object} index 生活指数map
@@ -245,70 +295,35 @@ function Weather({ province, city }) {
             })
         });
         return (
-            <div style={{ overflow: "hidden", position: "relative", width: "750px" }}>
-                <ul className="ls-living" data-index="0" style={{ cssFloat: "left", width: "375px", position: "relative", transitionProperty: "transform", left: "0px", transitionDuration: "300ms", transform: "translate(" + (LivingLeft ? "0" : "-375") + "px, 0px) translateZ(0px)" }}>
-                    {
-                        data.slice(0, 8).map(({ icon, name, info, detail }, key) => (
-                            <li className="item" key={key}><span className={"icon " + icon}></span><p className="content">{info}</p><p className="title">{name}</p></li>
-                        ))
-                    }
-                </ul>
-                <ul className="ls-living" data-index="1" style={{ cssFloat: "left", width: "375px", position: "relative", transitionProperty: "transform", left: "-375px", transitionDuration: "300ms", transform: "translate(" + (LivingLeft ? "375" : "0") + "px, 0px) translateZ(0px)" }}>
-                    {
-                        data.slice(8, 16).map(({ icon, name, info, detail }, key) => (
-                            <li className="item" key={key}><span className={"icon " + icon}></span><p className="content">{info}</p><p className="title">{name}</p></li>
-                        ))
-                    }
-                </ul>
-            </div>
+            <section id="sec-living" className="container">
+                <div id="living-scroll">
+                    <div className="react-swipe-container " style={{ overflow: "hidden", visibility: "visible", position: "relative" }}>
+                        <div style={{ overflow: "hidden", position: "relative", width: "750px" }}>
+                            <ul className="ls-living" data-index="0" style={{ cssFloat: "left", width: "375px", position: "relative", transitionProperty: "transform", left: "0px", transitionDuration: "300ms", transform: "translate(" + (LivingLeft ? "0" : "-375") + "px, 0px) translateZ(0px)" }}>
+                                {
+                                    data.slice(0, 8).map(({ icon, name, info, detail }, key) => (
+                                        <li className="item" key={key}><span className={"icon " + icon}></span><p className="content">{info}</p><p className="title">{name}</p></li>
+                                    ))
+                                }
+                            </ul>
+                            <ul className="ls-living" data-index="1" style={{ cssFloat: "left", width: "375px", position: "relative", transitionProperty: "transform", left: "-375px", transitionDuration: "300ms", transform: "translate(" + (LivingLeft ? "375" : "0") + "px, 0px) translateZ(0px)" }}>
+                                {
+                                    data.slice(8, 16).map(({ icon, name, info, detail }, key) => (
+                                        <li className="item" key={key}><span className={"icon " + icon}></span><p className="content">{info}</p><p className="title">{name}</p></li>
+                                    ))
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
         )
     }
-    /**
-     * 生活指数：滑轮滚动
-     * @param {*} e 
-     */
-    const livingWheel = (e) => {
-        e.preventDefault();
-        if (e.deltaY > 0) {
-            setLivingLeft(false);
-        } else {
-            setLivingLeft(true);
-        }
-    }
-
-    /**
-     * 小时：滑轮滚动
-     */
-    const hoursWheel = (e) => {
-        const step = 15
-        if (e.deltaY > 0) {
-            if (hoursScrollLeft >= -1115) {
-                setHoursScrollLeft(hoursScrollLeft - step)
-            }
-        } else {
-            if (hoursScrollLeft < 0) {
-                setHoursScrollLeft(hoursScrollLeft + step)
-            }
-        }
-    }
-
-    const changeTip = () => {
-        let c = 0
-        for (let i in observe["tips"]["observe"]) {
-            c++
-        }
-        let t = (tip + 1) % c
-        setTip(t)
-    }
-
     /**
      * 7日天气预报：初始化
      * @param {forecast_24h} data 
      */
     const initDays = (data) => {
-        moment.locale('zh-cn', {
-            weekdaysShort: '周日_周一_周二_周三_周四_周五_周六'.split('_')
-        });
         let today = moment();
         let formatData = [],
             chartLabelData = [],
@@ -484,7 +499,7 @@ function Weather({ province, city }) {
         let todayForecast = observe['forecast_24h'][1]
         let mainClass = m[current['weather_code']] + " " + dayOrNight(moment())
         return (
-            <div className="weather-root">
+            <div className="weather-root" style={{ margin: "0 auto" }}>
                 <section id="sec-main" className={mainClass}>
                     <audio id="weather-audio" src=""></audio>
                     <p id="txt-location"><span id="icon-location"></span>{city}</p>
@@ -549,23 +564,9 @@ function Weather({ province, city }) {
                         </div>
                     </div>
                 </section>
-                <section id="sec-hours" className="container">
-                    <div id="ct-scroll" onWheel={hoursWheel} style={{ width: "400%", transform: "translate(" + hoursScrollLeft + "px, 0px)" }}>
-                        <ol id="ls-hours-weather">
-                            {hoursForecast(observe)}
-                        </ol>
-                    </div>
-                </section>
+                {initHours(observe)}
                 {initDays(observe["forecast_24h"])}
-                <section id="sec-living" className="container">
-                    <div id="living-scroll" onWheel={livingWheel}>
-                        <div className="react-swipe-container " style={{ overflow: "hidden", visibility: "visible", position: "relative" }}>
-                            <div style={{ overflow: "hidden", position: "relative", width: "750px" }}>
-                                {initLiving(observe["index"])}
-                            </div>
-                        </div>
-                    </div>
-                </section>
+                {initLiving(observe["index"])}
             </div>
         )
     } else {
