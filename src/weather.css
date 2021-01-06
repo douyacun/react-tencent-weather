@@ -7,7 +7,6 @@ ol, ul {
 .weather-root {
 	background-color: #f4f4f4;
 	font: 12px/18px Simsun,Helvetica,Arial,sans-serif;
-	width: 375px;
 }
 .ct-pop-window {
 	text-align: center
@@ -1598,7 +1597,7 @@ body,button,dd,div,dl,dt,form,h1,h2,h3,h4,h5,h6,input,li,ol,p,td,textarea,th,ul 
 	display: none
 }
 
-#sec-main .container {
+.container {
 	display: block;
 	max-width: 500px;
 	margin: 0 auto;

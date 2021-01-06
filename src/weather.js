@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import jsonp from 'jsonp';
 import moment from 'moment';
 import echarts from 'echarts/lib/echarts';
@@ -94,37 +94,88 @@ moment.locale('zh-cn', {
     weekdaysShort: '周日_周一_周二_周三_周四_周五_周六'.split('_')
 });
 
-let curX = 0, dargLock = true;
+let curX = 0,
+    hoursDragLock = true, // 小时预报 加锁
+    daysDragLock = true, // 7天预报 加锁
+    livingDragLock = true; // 生活指数 加锁
 
-function Weather({ province, city }) {
+function Weather({ province, city, props = {}, showDays = true, showHours = true, showLiving = true, showTomorrow = true }) {
+    if (city == "") {
+        province = "上海"
+        city = "上海"
+    }
     const [observe, setObserve] = useState(undefined)
     const [windOrHumidity, setWindOrHumidity] = useState(true)
-    const [LivingLeft, setLivingLeft] = useState(true) // 生活指数：左右拖动
-    const [hoursLeft, setHousrLeft] = useState(0) // 生活指数：左右拖动
+    const [LivingLeft, setLivingLeft] = useState(true)
+    const [livingWidth, setLivingWidth] = useState(500)
+    const [hoursLeft, setHousrLeft] = useState(0) // 小时预报
+    const [daysLeft, setDaysLeft] = useState(0) // 7天预报
     const [tip, setTip] = useState(0) // tip：切换
     const hoursRef = useRef(null);
+    const daysRef = useRef(null);
+    // https://reactjs.org/docs/hooks-faq.html#how-can-i-measure-a-dom-node
+    const livingRef = useCallback(node => {
+        if (node !== null) {
+            setLivingWidth(() => {
+                return node.getBoundingClientRect().width
+            })
+        }
+    }, []);
     // const [hoursCurX, setHoursCurX] = useState(0) // 鼠标位置
     useEffect(() => {
-        jsonp(`https://wis.qq.com/weather/common?source=pc&weather_type=forecast_1h|forecast_24h|alarm|limit|tips|rise|observe|index&province=${province}&city=${city}&county=`, {}, (err, data) => {
+        jsonp(`https://wis.qq.com/weather/common?source=pc&weather_type=forecast_1h|forecast_24h|alarm|limit|tips|rise|observe|index|air&province=${province}&city=${city}&county=`, {}, (err, data) => {
             if (err) {
                 console.log(err)
             } else {
                 setObserve(data.data)
             }
         })
+
         // tip 轮换
-        // let tick = setInterval(() => {
-        //     setWindOrHumidity((v) => {
-        //         return !v
-        //     })
-        // }, 5000);
+        let tick = setInterval(() => {
+            setWindOrHumidity((v) => {
+                return !v
+            })
+        }, 5000);
         // 拖动
         document.addEventListener("mouseup", dragUp)
         return () => {
-            // clearInterval(tick)
+            clearInterval(tick)
             document.removeEventListener("mouseup", dragUp)
         }
     }, [])
+    // useEffect(() => {
+    //     livingWidth = livingRef.current.clientWidth
+    // }, [livingRef.current])
+    const dragUp = (e) => {
+        if (!hoursDragLock) {
+            let move = e.clientX - curX
+            setHousrLeft((hoursLeft) => {
+                let x = move <= 0 ? hoursLeft - hoursRef.current.clientWidth : hoursLeft + hoursRef.current.clientWidth
+                x = x >= 0 ? 0 : x;
+                x = Math.abs(x) <= hoursRef.current.clientWidth * 3 ? x : - hoursRef.current.clientWidth * 3;
+                return x
+            });
+        }
+        if (!daysDragLock) {
+            let move = e.clientX - curX
+            setDaysLeft(() => {
+                let x = move <= 0 ? daysRef.current.clientWidth - 500 : 0
+                x = x >= 0 ? 0 : x;
+                x = Math.abs(x) <= 500 ? x : 0;
+                return x
+            });
+        }
+        if (!livingDragLock) {
+            let move = e.clientX - curX
+            setLivingLeft(() => {
+                return move <= 0 ? 375 : 0
+            });
+        }
+        hoursDragLock = true;
+        daysDragLock = true;
+        livingDragLock = true;
+    }
     /**
      * 小时预报：初始化
      * @param {Object} observe 
@@ -183,12 +234,13 @@ function Weather({ province, city }) {
                 )
             }
         })
-        while (list.length > 25) {
+        while (list.length > 26) {
             list.pop()
         }
         return (
-            <section id="sec-hours" className="container" ref={hoursRef} onMouseMove={hoursDrag}>
-                <div id="ct-scroll" onMouseDown={hoursDragDown} style={{ width: "400%", transitionDuration: "500ms", transform: "translate(" + hoursLeft + "px, 0px)" }}>
+            <section id="sec-hours" className="container" ref={hoursRef}>
+                <div id="ct-scroll" onMouseDown={hoursDragDown} style={{ width: "400%", cursor: "grab", height: "100%", transitionDuration: "500ms", transform: "translate(" + hoursLeft + "px, 0px)" }}>
+                    <div style={{ position: "absolute", inset: 0, zIndex: 10, height: "100%" }}></div>
                     <ol id="ls-hours-weather">
                         {list}
                     </ol>
@@ -196,29 +248,14 @@ function Weather({ province, city }) {
             </section>
         )
     }
-    const hoursDrag = (e) => {
-        let move;
-        if (!dargLock) {
-
-            dargLock = true
-            move = e.clientX - curX
-            if (hoursLeft <= 0) {
-                let x = move <= 0 ? hoursLeft - hoursRef.current.clientWidth : hoursLeft + hoursRef.current.clientWidth 
-                x = x >=0 ? 0: x;
-                x = Math.abs(x) <= hoursRef.current.clientWidth*3 ? x : - hoursRef.current.clientWidth*3;
-                console.log(x, e.clientX, curX);
-                setHousrLeft(x);
-            }
-        }
-    }
+    /**
+     * 小时预报：左右拖动
+     * @param {*} e 
+     */
     const hoursDragDown = (e) => {
-        dargLock = false
         curX = e.clientX
+        hoursDragLock = false
     }
-    const dragUp = (e) => {
-        dargLock = true
-    }
-
     const changeTip = () => {
         let c = 0
         for (let i in observe["tips"]["observe"]) {
@@ -295,18 +332,18 @@ function Weather({ province, city }) {
             })
         });
         return (
-            <section id="sec-living" className="container">
+            <section id="sec-living" className="container" onMouseDown={livingDragDown} ref={livingRef}>
                 <div id="living-scroll">
-                    <div className="react-swipe-container " style={{ overflow: "hidden", visibility: "visible", position: "relative" }}>
-                        <div style={{ overflow: "hidden", position: "relative", width: "750px" }}>
-                            <ul className="ls-living" data-index="0" style={{ cssFloat: "left", width: "375px", position: "relative", transitionProperty: "transform", left: "0px", transitionDuration: "300ms", transform: "translate(" + (LivingLeft ? "0" : "-375") + "px, 0px) translateZ(0px)" }}>
+                    <div className="react-swipe-container " style={{ overflow: "hidden", cursor: "grab", userSelect: "none", visibility: "visible", position: "relative" }}>
+                        <div style={{ overflow: "hidden", position: "relative", width: livingWidth * 2 }}>
+                            <ul className="ls-living" data-index="0" style={{ cssFloat: "left", width: livingWidth, position: "relative", transitionProperty: "transform", left: 0, transitionDuration: "300ms", transform: "translate(" + (0 - LivingLeft) + "px, 0px) translateZ(0px)" }}>
                                 {
                                     data.slice(0, 8).map(({ icon, name, info, detail }, key) => (
                                         <li className="item" key={key}><span className={"icon " + icon}></span><p className="content">{info}</p><p className="title">{name}</p></li>
                                     ))
                                 }
                             </ul>
-                            <ul className="ls-living" data-index="1" style={{ cssFloat: "left", width: "375px", position: "relative", transitionProperty: "transform", left: "-375px", transitionDuration: "300ms", transform: "translate(" + (LivingLeft ? "375" : "0") + "px, 0px) translateZ(0px)" }}>
+                            <ul className="ls-living" data-index="1" style={{ cssFloat: "left", width: livingWidth, position: "relative", transitionProperty: "transform", left: -livingWidth, transitionDuration: "300ms", transform: "translate(" + (livingWidth - LivingLeft) + "px, 0px) translateZ(0px)" }}>
                                 {
                                     data.slice(8, 16).map(({ icon, name, info, detail }, key) => (
                                         <li className="item" key={key}><span className={"icon " + icon}></span><p className="content">{info}</p><p className="title">{name}</p></li>
@@ -318,6 +355,10 @@ function Weather({ province, city }) {
                 </div>
             </section>
         )
+    }
+    const livingDragDown = (e) => {
+        curX = e.clientX
+        livingDragLock = false
     }
     /**
      * 7日天气预报：初始化
@@ -464,8 +505,8 @@ function Weather({ province, city }) {
             ]
         };
         return (
-            <section id="sec-days" className="container">
-                <div id="ct-scroll" style={{ width: 500 }}>
+            <section id="sec-days" className="container" onMouseDown={daysDragDown} ref={daysRef}>
+                <div id="ct-scroll" style={{ width: 500, cursor: "grab", height: "100%", userSelect: "none", transitionDuration: "500ms", transform: "translate(" + daysLeft + "px, 0px)" }}>
                     <ol id="ls-days">
                         {
                             formatData.map((item, key) => (
@@ -492,14 +533,17 @@ function Weather({ province, city }) {
             </section>
         )
     }
-
+    const daysDragDown = (e) => {
+        curX = e.clientX
+        daysDragLock = false
+    }
     if (observe) {
         let current = observe['observe']
         let tomorrowForecast = observe['forecast_24h'][2]
         let todayForecast = observe['forecast_24h'][1]
-        let mainClass = m[current['weather_code']] + " " + dayOrNight(moment())
+        let mainClass = m[current['weather_code']] + " " + dayOrNight(moment()) + " container"
         return (
-            <div className="weather-root" style={{ margin: "0 auto" }}>
+            <div className="weather-root" {...props}>
                 <section id="sec-main" className={mainClass}>
                     <audio id="weather-audio" src=""></audio>
                     <p id="txt-location"><span id="icon-location"></span>{city}</p>
@@ -519,54 +563,37 @@ function Weather({ province, city }) {
                         <div className="layer" id="layer3" style={{ transform: "translate3d(0px, 0px, 0px)" }}></div>
                     </div>
                     <div className="ct-aqi level2" data-boss="aqi">
-                        <p id="til">72</p>
-                        <p id="value">良</p>
+                        <p id="til">{observe["air"]["aqi"]}</p>
+                        <p id="value">{observe["air"]["aqi_name"]}</p>
                     </div>
-                    <div className="ct-pop-window">
-                        <div className="bg-cover"></div>
-                        <div className="ct-window">
-                            <h3 className="title"></h3>
-                            <p className="txt-info"></p>
-                            <button className="btn-close">我知道了</button>
-                        </div>
-                    </div>
-                    <div className="ct-pop-window">
-                        <div className="bg-cover"></div>
-                        <div id="ct-air-pop" className="ct-window levelundefined full">
-                            <div id="ct-main">
-                                <a id="icon-close"></a>
-                                <p id="titl">空气质量指数</p>
-                                <p id="val"></p>
-                                <p id="level"></p>
+                </section>
+                {
+                    showTomorrow && (<section id="sec-tomorrow" className="container">
+                        <div className="item">
+                            <div className="top">
+                                <p className="date">今天</p>
+                                <p className="temperature">{todayForecast['max_degree']}/{todayForecast['min_degree']}&deg;</p>
+                            </div>
+                            <div className="bottom">
+                                <p className="weather">{todayForecast['day_weather']}</p>
+                                <img src={`//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/day/${todayForecast['day_weather_code']}.svg`} className="logo" />
                             </div>
                         </div>
-                    </div>
-                </section>
-                <section id="sec-tomorrow" className="container">
-                    <div className="item">
-                        <div className="top">
-                            <p className="date">今天</p>
-                            <p className="temperature">{todayForecast['max_degree']}/{todayForecast['min_degree']}&deg;</p>
+                        <div className="item">
+                            <div className="top">
+                                <p className="date">明天</p>
+                                <p className="temperature">{tomorrowForecast['max_degree']}/{tomorrowForecast['min_degree']}&deg;</p>
+                            </div>
+                            <div className="bottom">
+                                <p className="weather">{tomorrowForecast['day_weather']}</p>
+                                <img src={`//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/day/${tomorrowForecast['day_weather_code']}.svg`} className="logo" />
+                            </div>
                         </div>
-                        <div className="bottom">
-                            <p className="weather">{todayForecast['day_weather']}</p>
-                            <img src={`//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/day/${todayForecast['day_weather_code']}.svg`} className="logo" />
-                        </div>
-                    </div>
-                    <div className="item">
-                        <div className="top">
-                            <p className="date">明天</p>
-                            <p className="temperature">{tomorrowForecast['max_degree']}/{tomorrowForecast['min_degree']}&deg;</p>
-                        </div>
-                        <div className="bottom">
-                            <p className="weather">{tomorrowForecast['day_weather']}</p>
-                            <img src={`//mat1.gtimg.com/pingjs/ext2020/weather/mobile2.0/assets/weather/day/${tomorrowForecast['day_weather_code']}.svg`} className="logo" />
-                        </div>
-                    </div>
-                </section>
-                {initHours(observe)}
-                {initDays(observe["forecast_24h"])}
-                {initLiving(observe["index"])}
+                    </section>)
+                }
+                {showHours && initHours(observe)}
+                {showDays && initDays(observe["forecast_24h"])}
+                {showLiving && initLiving(observe["index"])}
             </div>
         )
     } else {
