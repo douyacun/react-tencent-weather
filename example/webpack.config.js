@@ -10,6 +10,7 @@ module.exports = {
     resolve: {
         extensions: ['.js', '.jsx']
     },
+    mode: "development",
     module: {
         rules: [
             {
@@ -30,7 +31,8 @@ module.exports = {
         })
     ],
     devServer: {
-        port: 3000
+        port: 3000,
+        open: true
     },
     performance: {
         hints: "warning", // 枚举

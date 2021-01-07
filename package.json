@@ -2,11 +2,10 @@
   "name": "react-tencent-weather",
   "version": "1.0.5",
   "description": "react腾讯天气组件",
-  "main": "lib/index.js",
+  "main": "build/index.js",
   "scripts": {
-    "build": "webpack --config config/webpack.prd.config.js --mode development",
-    "start": "webpack serve --config config/webpack.dev.config.js --mode development",
-    "push": "npm run build && npm publish"
+    "build": "webpack",
+    "start": "webpack serve --config example/webpack.config.js"
   },
   "repository": {
     "type": "git",
@@ -14,7 +13,10 @@
   },
   "keywords": [
     "react",
-    "腾讯天气"
+    "腾讯天气",
+    "天气组件",
+    "24小时预报",
+    "7天预报"
   ],
   "author": "douyacun",
   "license": "ISC",
@@ -43,5 +45,9 @@
     "webpack": "^5.11.1",
     "webpack-cli": "^4.3.1",
     "webpack-dev-server": "^3.11.1"
+  },
+  "peerDependencies": {
+    "react": "^16.8.4",
+    "react-dom": "^16.8.4"
   }
 }

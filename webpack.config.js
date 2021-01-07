@@ -1,14 +1,31 @@
 const path = require('path');
 
 module.exports = {
-    entry: './src/weather.js',
+    entry: './src/index.js',
     output: {
-        path: path.join(__dirname, '../lib/'),
-        filename: 'index.js'
+        path: path.join(__dirname, 'build/'),
+        filename: 'index.js',
+        libraryTarget: 'umd', // 采用通用模块定义
+        libraryTarget: 'commonjs2'
+    },
+    externals: {
+        react: {
+            commonjs: 'react',
+            commonjs2: 'react',
+            amd: 'react',
+            root: 'React',
+        },
+        'react-dom': {
+            commonjs: 'react-dom',
+            commonjs2: 'react-dom',
+            amd: 'react-dom',
+            root: 'ReactDOM',
+        },
     },
     resolve: {
         extensions: ['.js', '.jsx']
     },
+    mode: "production",
     module: {
         rules: [
             {
@@ -35,5 +52,5 @@ module.exports = {
             // 提供资源文件名的断言函数
             return assetFilename.endsWith('.css') || assetFilename.endsWith('.js');
         }
-    },
+    }
 }

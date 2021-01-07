@@ -5,7 +5,7 @@ import echarts from 'echarts/lib/echarts';
 import ReactEchartsCore from 'echarts-for-react/lib/core';
 import 'echarts/lib/chart/bar';
 import 'echarts/lib/chart/line';
-import "./weather.css";
+import "./index.css";
 
 const m = {
     "00": "C2",
