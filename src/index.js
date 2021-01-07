@@ -138,10 +138,14 @@ function Weather({ province, city, props = {}, showDays = true, showHours = true
             })
         }, 5000);
         // 拖动
-        document.addEventListener("mouseup", dragUp)
+        if(typeof window !== 'undefined' && document ) {
+            document.addEventListener("mouseup", dragUp)
+        }
         return () => {
             clearInterval(tick)
-            document.removeEventListener("mouseup", dragUp)
+            if(typeof window !== 'undefined' && document ) {
+                document.removeEventListener("mouseup", dragUp)
+            }
         }
     }, [])
     // useEffect(() => {
