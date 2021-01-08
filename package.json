@@ -1,10 +1,10 @@
 {
   "name": "react-tencent-weather",
-  "version": "1.0.14",
+  "version": "1.1.0",
   "description": "react腾讯天气组件",
-  "main": "build/index.js",
+  "main": "lib/index.js",
   "scripts": {
-    "build": "webpack",
+    "build": "webpack --config config/webpack.client.js && webpack --config config/webpack.ssr.js",
     "start": "webpack serve --config example/webpack.config.js"
   },
   "repository": {
@@ -40,8 +40,11 @@
     "@babel/preset-react": "^7.12.10",
     "babel-loader": "^8.2.2",
     "css-loader": "^5.0.1",
+    "extract-css-chunks-webpack-plugin": "^4.9.0",
     "html-webpack-plugin": "^4.5.1",
+    "optimize-css-assets-webpack-plugin": "^5.0.4",
     "style-loader": "^2.0.0",
+    "terser-webpack-plugin": "^5.0.3",
     "webpack": "^5.11.1",
     "webpack-cli": "^4.3.1",
     "webpack-dev-server": "^3.11.1"

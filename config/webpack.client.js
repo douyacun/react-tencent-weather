@@ -1,9 +1,10 @@
 const path = require('path');
+const ExtractCssChunks = require('extract-css-chunks-webpack-plugin');
 
 module.exports = {
     entry: './src/index.js',
     output: {
-        path: path.join(__dirname, 'build/'),
+        path: path.join(__dirname, '../lib/'),
         filename: 'index.js',
         libraryTarget: 'commonjs2',
     },
