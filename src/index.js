@@ -138,15 +138,15 @@ function Weather({ province, city, props = {}, showDays = true, showHours = true
             })
         }, 5000);
         // 拖动
-        // if(typeof document !== 'undefined') {
-        //     document.addEventListener("mouseup", dragUp)
-        // }
-        // return () => {
-        //     clearInterval(tick)
-        //     if(typeof document !== 'undefined') {
-        //         document.removeEventListener("mouseup", dragUp)
-        //     }
-        // }
+        if(typeof document !== 'undefined') {
+            document.addEventListener("mouseup", dragUp)
+        }
+        return () => {
+            clearInterval(tick)
+            if(typeof document !== 'undefined') {
+                document.removeEventListener("mouseup", dragUp)
+            }
+        }
     }, [])
     // useEffect(() => {
     //     livingWidth = livingRef.current.clientWidth
