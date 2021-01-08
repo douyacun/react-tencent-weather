@@ -1,4 +1,5 @@
-## react腾讯天气组件
+
+## react天气组件
 
  [![npm](https://img.shields.io/npm/v/react-tencent-weather)](https://www.npmjs.com/package/react-tencent-weather) [![npm](https://img.shields.io/npm/dm/react-tencent-weather)](https://www.npmjs.com/package/react-tencent-weather) [![npm](https://img.shields.io/npm/l/react-tencent-weather)](https://www.npmjs.com/package/react-tencent-weather) ![echarts supported](https://img.shields.io/badge/echarts-%5E3.0.0%20%7C%7C%20%5E4.0.0-blue.svg) ![react supported](https://img.shields.io/badge/React-%5E16.8.0-blue.svg)
 
