@@ -5,8 +5,7 @@ module.exports = {
     output: {
         path: path.join(__dirname, 'build/'),
         filename: 'index.js',
-        libraryTarget: 'umd', // 采用通用模块定义
-        libraryTarget: 'commonjs2'
+        libraryTarget: 'commonjs2',
     },
     externals: {
         react: {
