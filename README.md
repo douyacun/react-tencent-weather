@@ -25,7 +25,7 @@
 ## install
 
 ```bash
-npm install tencent_weather --save
+npm i react-tencent-weather --save
 ```
 
 运行demo:
