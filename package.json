@@ -1,6 +1,6 @@
 {
   "name": "react-tencent-weather",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "react腾讯天气组件",
   "main": "lib/index.js",
   "scripts": {
