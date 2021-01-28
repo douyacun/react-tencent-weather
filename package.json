@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/douyacun/tencent-weather.git"
+    "url": "git+https://github.com/douyacun/react-tencent-weather.git"
   },
   "keywords": [
     "react",
@@ -21,9 +21,9 @@
   "author": "douyacun",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/douyacun/tencent-weather/issues"
+    "url": "https://github.com/douyacun/react-tencent-weather/issues"
   },
-  "homepage": "https://github.com/douyacun/tencent-weather#readme",
+  "homepage": "https://github.com/douyacun/react-tencent-weather#readme",
   "dependencies": {
     "@babel/cli": "^7.12.10",
     "echarts": "^5.0.0",
